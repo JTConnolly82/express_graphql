@@ -2,7 +2,9 @@ const Event = require('../../models/event');
 const User = require('../../models/user');
 const Booking = require('../../models/booking');
 
+
 const bcrypt = require('bcryptjs');
+
 
 const events = eventIds => {
   return Event.find({ _id: { $in: eventIds } })
@@ -22,6 +24,16 @@ const events = eventIds => {
     })
 }
 
+const singleEvent = eventId => {
+  return Event.findById(eventId)
+  .then(event => {
+    return {
+      ...event._doc,
+      _id: event.id,
+      creator: user.bind(this, event.creator)
+    }
+  })
+}
 
 const user = userId => {
   return User.findById(userId)
@@ -42,6 +54,7 @@ module.exports = {
     return Event.find()
       .then(events => {
         return events.map(event => {
+          console.log(event._id)
           return {
             ...event._doc, 
             _id: event.id,
@@ -60,7 +73,9 @@ module.exports = {
             ...booking._doc,
             _id: booking.id,
             createdAt: new Date(booking._doc.createdAt).toISOString(),
-            updatedAt: new Date(booking._doc.updatedAt).toISOString()
+            updatedAt: new Date(booking._doc.updatedAt).toISOString(),
+            user: user.bind(this, booking._doc.user),
+            event: singleEvent.bind(this, booking._doc.event)
           }
         })
       })
@@ -122,7 +137,7 @@ module.exports = {
       })
   },
   bookEvent: args => {
-    return Event.findOne({_id: args.eventId})
+    return Event.findOne({ _id: args.eventId })
     .then(targetEvent => {
       booking = new Booking({
         user: '5e486616ed6767abca835faa',
@@ -135,7 +150,8 @@ module.exports = {
           ...createdBooking._doc, 
           _id: createdBooking.id,
           createdAt: new Date(createdBooking._doc.createdAt).toISOString(),
-          updatedAt: new Date(createdBooking._doc.updatedAt).toISOString() 
+          updatedAt: new Date(createdBooking._doc.updatedAt).toISOString(),
+          event: singleEvent.bind(this, createdBooking._doc.event)
         }
       })
       .catch(err => {
@@ -143,6 +159,18 @@ module.exports = {
       })
   },
   cancelBooking: args => {
-
+    return Booking.findOne({ _id: args.bookingId}).populate('event')
+    .then(cancelledBooking => {
+      return Booking.findByIdAndDelete(args.bookingId).then(()=> {
+        return {
+          ...cancelledBooking.event._doc,
+          _id: cancelledBooking.event.id,
+          creator: user.bind(this, cancelledBooking.event._doc.creator)
+        };
+      })
+    })
+    .catch(err => {
+      throw err
+    })
   }
- }
+}
