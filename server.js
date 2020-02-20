@@ -4,11 +4,12 @@ const app = express();
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const gqlResolvers = require('./graphql/resolvers');
-const gqlSchema = require('./graphql/schema');
+const gqlResolvers = require('./graphql/resolvers/index');
+const gqlSchema = require('./graphql/schema/index');
+const authMiddle = require('./middleware/authMiddle');
 
 
-
+app.use(authMiddle);
 
 
 app.use('/graphql', graphqlHTTP({
